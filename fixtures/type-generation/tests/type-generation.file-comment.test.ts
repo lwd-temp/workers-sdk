@@ -20,6 +20,14 @@ describe("`wrangler types` - file comment", () => {
 		args = "",
 		expectedOutputFile = "worker-configuration.d.ts"
 	): string {
+		const wranglerDirPath = path.resolve(
+			__dirname,
+			"..",
+			"..",
+			"..",
+			"packages",
+			"wrangler"
+		);
 		const wranglerPath = path.resolve(
 			__dirname,
 			"..",
@@ -28,6 +36,7 @@ describe("`wrangler types` - file comment", () => {
 			"packages",
 			"wrangler"
 		);
+
 		execSync(`npx ${wranglerPath} types ${args}`, {
 			cwd: tempDir,
 		});

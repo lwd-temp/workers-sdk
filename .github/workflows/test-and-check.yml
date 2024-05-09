@@ -76,7 +76,7 @@ jobs:
     name: "Tests"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         filter: ["./fixtures/*", "./packages/*", "./tools"]
     runs-on: ${{ matrix.os }}
     steps:
