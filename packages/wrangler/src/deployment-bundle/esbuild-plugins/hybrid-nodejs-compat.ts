@@ -1,5 +1,6 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
+import dedent from "ts-dedent";
 import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
@@ -39,7 +40,9 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 		{ filter: /.*/, namespace: REQUIRED_NODE_BUILT_IN_NAMESPACE },
 		({ path }) => {
 			return {
-				contents: `export * from '${path}'`,
+				contents: dedent`
+        import libDefault from '${path}';
+        module.exports = libDefault;`,
 				loader: "js",
 			};
 		}
@@ -190,16 +193,29 @@ function handleNodeJSGlobals(
  * This is important to support `inject` config for `performance` and `Performance` introduced
  * in https://github.com/unjs/unenv/pull/257
  */
-function encodeToLowerCase(str: string): string {
-	return str.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+export function encodeToLowerCase(str: string): string {
+	return str
+		.replaceAll(/\$/g, () => "$$")
+		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
 }
 
 /**
  * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
-function decodeFromLowerCase(str: string): string {
-	return str.replaceAll(
-		/\$([a-z])/g,
-		(match, letter) => `${letter.toUpperCase()}`
-	);
+export function decodeFromLowerCase(str: string): string {
+	let out = "";
+	let i = 0;
+	while (i < str.length - 1) {
+		if (str[i] === "$") {
+			i++;
+			out += str[i].toUpperCase();
+		} else {
+			out += str[i];
+		}
+		i++;
+	}
+	if (i < str.length) {
+		out += str[i];
+	}
+	return out;
 }

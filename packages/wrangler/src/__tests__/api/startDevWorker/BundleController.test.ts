@@ -1,31 +1,18 @@
 import { once } from "events";
-import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { runInTempDir } from "../../helpers/run-in-tmp";
+import { seed } from "../../helpers/seed";
 import { unusable } from "../../helpers/unusable";
-import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	StartDevWorkerOptions,
-} from "../../../api";
+import type { BundleCompleteEvent, StartDevWorkerOptions } from "../../../api";
 
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
 	const startIndex = source.indexOf(`// ${name}`);
 	const endIndex = source.indexOf("\n//", startIndex);
 	return source.slice(startIndex, endIndex);
-}
-// Seeds the `root` directory on the file system with some data. Use in
-// combination with `dedent` for petty formatting of seeded contents.
-export async function seed(files: Record<string, string | Uint8Array>) {
-	for (const [name, contents] of Object.entries(files)) {
-		const filePath = path.resolve(name);
-		await mkdir(path.dirname(filePath), { recursive: true });
-		await writeFile(filePath, contents);
-	}
 }
 
 const test = base.extend<{ controller: BundlerController }>({
@@ -46,13 +33,19 @@ async function waitForBundleComplete(
 	return event;
 }
 
-async function _waitForBundleStart(
-	controller: BundlerController
-): Promise<BundleStartEvent> {
-	const [event] = await once(controller, "bundleStart");
-	return event;
+function configDefaults(
+	config: Partial<StartDevWorkerOptions>
+): StartDevWorkerOptions {
+	const persist = path.join(process.cwd(), ".wrangler/persist");
+	return {
+		entrypoint: "NOT_REAL",
+		directory: "NOT_REAL",
+		build: unusable<StartDevWorkerOptions["build"]>(),
+		legacy: {},
+		dev: { persist },
+		...config,
+	};
 }
-
 describe("happy path bundle + watch", () => {
 	runInTempDir();
 	test("single ts source file", async ({ controller }) => {
@@ -66,28 +59,27 @@ describe("happy path bundle + watch", () => {
 				} satisfies ExportedHandler
 			`,
 		});
-		const config: StartDevWorkerOptions = {
+		const config: Partial<StartDevWorkerOptions> = {
+			legacy: {},
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config,
+			config: configDefaults(config),
 		});
 
 		let ev = await waitForBundleComplete(controller);
@@ -138,28 +130,27 @@ describe("happy path bundle + watch", () => {
 				export default "someone"
 			`,
 		});
-		const config: StartDevWorkerOptions = {
+		const config: Partial<StartDevWorkerOptions> = {
+			legacy: {},
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config,
+			config: configDefaults(config),
 		});
 
 		let ev = await waitForBundleComplete(controller);
@@ -204,18 +195,15 @@ describe("happy path bundle + watch", () => {
 				} satisfies ExportedHandler
 			`,
 		});
-		const config: StartDevWorkerOptions = {
+		const config: Partial<StartDevWorkerOptions> = {
+			legacy: {},
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: path.resolve("."),
-				format: "modules",
-				moduleRoot: path.resolve("."),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("out.ts"),
+			directory: path.resolve("."),
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {
@@ -223,12 +211,14 @@ describe("happy path bundle + watch", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("."),
 			},
 		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config,
+			config: configDefaults(config),
 		});
 
 		let ev = await waitForBundleComplete(controller);
@@ -279,28 +269,28 @@ describe("switching", () => {
 				} satisfies ExportedHandler
 			`,
 		});
-		const config: StartDevWorkerOptions = {
+		const config: Partial<StartDevWorkerOptions> = {
+			legacy: {},
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
+
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config,
+			config: configDefaults(config),
 		});
 
 		const ev = await waitForBundleComplete(controller);
@@ -325,18 +315,14 @@ describe("switching", () => {
 					} satisfies ExportedHandler
 				`,
 		});
-		const configCustom = {
+		const configCustom: Partial<StartDevWorkerOptions> = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: process.cwd(),
-				format: "modules",
-				moduleRoot: process.cwd(),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("out.ts"),
+			directory: process.cwd(),
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {
@@ -344,12 +330,15 @@ describe("switching", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: process.cwd(),
 			},
-		} satisfies StartDevWorkerOptions;
+			legacy: {},
+		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config: configCustom,
+			config: configDefaults(configCustom),
 		});
 
 		let evCustom = await waitForBundleComplete(controller);
@@ -398,18 +387,15 @@ describe("switching", () => {
 					} satisfies ExportedHandler
 				`,
 		});
-		const configCustom = {
+		const configCustom: Partial<StartDevWorkerOptions> = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: process.cwd(),
-				format: "modules",
-				moduleRoot: process.cwd(),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("out.ts"),
+			directory: process.cwd(),
+
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {
@@ -417,12 +403,14 @@ describe("switching", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: process.cwd(),
 			},
-		} satisfies StartDevWorkerOptions;
+		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config: configCustom,
+			config: configDefaults(configCustom),
 		});
 
 		const evCustom = await waitForBundleComplete(controller);
@@ -446,28 +434,28 @@ describe("switching", () => {
 						} satisfies ExportedHandler
 					`,
 		});
-		const config: StartDevWorkerOptions = {
+		const config: Partial<StartDevWorkerOptions> = {
+			legacy: {},
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
+
 			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
-			config,
+			config: configDefaults(config),
 		});
 
 		let ev = await waitForBundleComplete(controller);

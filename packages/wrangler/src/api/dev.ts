@@ -1,5 +1,6 @@
 import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
@@ -7,6 +8,8 @@ import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { ProxyData } from "./startDevWorker";
+import type { FSWatcher } from "chokidar";
+import type { Instance } from "ink";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 
@@ -78,6 +81,7 @@ export interface UnstableDevOptions {
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
+		fileBasedRegistry?: boolean;
 	};
 }
 
@@ -122,6 +126,7 @@ export async function unstable_dev(
 		testMode,
 		testScheduled,
 		devEnv = false,
+		fileBasedRegistry = false,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -202,6 +207,7 @@ export async function unstable_dev(
 		upstreamProtocol: undefined,
 		var: undefined,
 		define: undefined,
+		alias: undefined,
 		jsxFactory: undefined,
 		jsxFragment: undefined,
 		tsconfig: undefined,
@@ -214,6 +220,7 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalVersions: undefined,
 		experimentalDevEnv: devEnv,
+		experimentalRegistry: fileBasedRegistry,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
@@ -245,8 +252,20 @@ export async function unstable_dev(
 		};
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-		const devServer = await startDev(devOptions);
+		const devServer = (await run(
+			{
+				DEV_ENV: false,
+				FILE_BASED_REGISTRY: fileBasedRegistry,
+				JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+			},
+			() => startDev(devOptions)
+		)) as {
+			devReactElement: Instance;
+			watcher: FSWatcher | undefined;
+			stop: () => Promise<void>;
+		};
 		const { port, address, proxyData } = await readyPromise;
+
 		return {
 			port,
 			address,

@@ -104,10 +104,11 @@ export async function createDeployment(
 	accountId: string,
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
-	message: string | undefined
+	message: string | undefined,
+	force?: boolean
 ) {
-	const res = await fetchResult(
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`,
+	return await fetchResult(
+		`/accounts/${accountId}/workers/scripts/${workerName}/deployments${force ? "?force=true" : ""}`,
 		{
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -122,10 +123,6 @@ export async function createDeployment(
 			}),
 		}
 	);
-
-	// TODO: handle specific errors
-
-	return res;
 }
 
 type NonVersionedScriptSettings = {

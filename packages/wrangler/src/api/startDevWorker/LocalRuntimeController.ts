@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
-import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
@@ -48,19 +47,8 @@ function getName(config: StartDevWorkerOptions) {
 async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const { bindings: convertedBindings, fetchers } =
-		await convertBindingsToCfWorkerInitBindings(event.config.bindings);
-
-	// TODO: Remove this passthrough
-	const bindings = event.config._bindings
-		? event.config._bindings
-		: convertedBindings;
-
-	const persistence = getLocalPersistencePath(
-		typeof event.config.dev?.persist === "object"
-			? event.config.dev?.persist.path
-			: undefined,
-		event.config.config?.path
+	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
+		event.config.bindings
 	);
 
 	const crons = [];
@@ -103,27 +91,20 @@ async function convertToConfigBundle(
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
-		workerDefinitions: new Proxy(
-			{},
-			{
-				get(_, name: string) {
-					return event.config.dev?.getRegisteredWorker?.(name);
-				},
-			}
-		),
-		assetPaths: event.config.site?.path
+		workerDefinitions: event.config.dev?.registry,
+		assetPaths: event.config.legacy?.site?.bucket
 			? {
-					baseDirectory: event.config.site.path,
+					baseDirectory: event.config.legacy?.site?.bucket,
 					assetDirectory: "",
-					excludePatterns: event.config.site.exclude ?? [],
-					includePatterns: event.config.site.include ?? [],
+					excludePatterns: event.config.legacy?.site?.exclude ?? [],
+					includePatterns: event.config.legacy?.site?.include ?? [],
 				}
 			: undefined,
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
 		inspectorPort: 0,
-		localPersistencePath: persistence,
+		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
 		queueConsumers,

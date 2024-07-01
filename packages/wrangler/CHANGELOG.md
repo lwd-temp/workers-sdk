@@ -1,5 +1,134 @@
 # wrangler
 
+## 3.62.0
+
+### Minor Changes
+
+- [#5950](https://github.com/cloudflare/workers-sdk/pull/5950) [`0075621`](https://github.com/cloudflare/workers-sdk/commit/007562109b583adb6ae15bba5f50029735af24e5) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feat: add `wrangler versions secret put`, `wrangler versions secret bulk` and `wrangler versions secret list`
+
+  `wrangler versions secret put` allows for you to add/update a secret even if the latest version is not fully deployed. A new version with this secret will be created, the existing secrets and config are copied from the latest version.
+
+  `wrangler versions secret bulk` allows you to bulk add/update multiple secrets at once, this behaves the same as `secret put` and will only make one new version.
+
+  `wrangler versions secret list` lists the secrets available to the currently deployed versions. `wrangler versions secret list --latest-version` or `wrangler secret list` will list for the latest version.
+
+  Additionally, we will now prompt for extra confirmation if attempting to rollback to a version with different secrets than the currently deployed.
+
+### Patch Changes
+
+- [#6118](https://github.com/cloudflare/workers-sdk/pull/6118) [`1621992`](https://github.com/cloudflare/workers-sdk/commit/162199289d51dbaf3f7a371d777012d0039fbdfb) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: rollback in the case of a secret change, the prompt meant to show was not showing due to the spinner in an interactive env. It will now properly show.
+
+  chore: improve the view of `wrangler versions view` and change up copy a little for `versions secret` commands.
+
+- [#6105](https://github.com/cloudflare/workers-sdk/pull/6105) [`26855f3`](https://github.com/cloudflare/workers-sdk/commit/26855f39ae635feebb9d5768b64494e73d979b47) Thanks [@helloimalastair](https://github.com/helloimalastair)! - feat: Add help messages to all invalid `r2` commands
+
+- [#3735](https://github.com/cloudflare/workers-sdk/pull/3735) [`9c7df38`](https://github.com/cloudflare/workers-sdk/commit/9c7df38871b9fcfda4890a00507e6ef149e0cbcd) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - chore: Cleanup `wrangler --help` output
+
+  This commit cleans up and standardizes the look and feel of all `wrangler` commands as displayed by `wrangler --help` and `wrangler <cmd> --help`.
+
+- [#6080](https://github.com/cloudflare/workers-sdk/pull/6080) [`e2972cf`](https://github.com/cloudflare/workers-sdk/commit/e2972cf2ce785f5d56b1476e30102e05febba320) Thanks [@threepointone](https://github.com/threepointone)! - chore: run eslint (with react config) on workers-playground/wrangler
+
+  This enables eslint (with our react config) for the workers-playground project. Additionally, this enables the react-jsx condition in relevant tsconfig/eslint config, letting us write jsx without having React in scope.
+
+- [#6001](https://github.com/cloudflare/workers-sdk/pull/6001) [`d39d595`](https://github.com/cloudflare/workers-sdk/commit/d39d59589f7fe3102276bad6b93caf10c39e5f20) Thanks [@penalosa](https://github.com/penalosa)! - chore: changes to how `wrangler dev` launches your worker, behind the experimental `--x-dev-env` flag
+
+- [#5214](https://github.com/cloudflare/workers-sdk/pull/5214) [`05c5607`](https://github.com/cloudflare/workers-sdk/commit/05c56073b4e8c71ab6e0b287adddddc00d763170) Thanks [@penalosa](https://github.com/penalosa)! - feat: Experimental file based service discovery when running multiple Wrangler instances locally. To try it out, make sure all your local Wrangler instances are running with the `--x-registry` flag.
+
+- Updated dependencies [[`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059), [`d4e1e9f`](https://github.com/cloudflare/workers-sdk/commit/d4e1e9fc3439c3d6bd2d1d145d3edc85b551f276)]:
+  - miniflare@3.20240620.0
+  - @cloudflare/kv-asset-handler@0.3.4
+
+## 3.61.0
+
+### Minor Changes
+
+- [#5995](https://github.com/cloudflare/workers-sdk/pull/5995) [`374bc44`](https://github.com/cloudflare/workers-sdk/commit/374bc44cce65e2f83f10452122719d3ab28827b3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: allow Durable Object migrations to be overridable in environments
+
+  By making the `migrations` key inheritable, users can provide different migrations
+  for each wrangler.toml environment.
+
+  Resolves [#729](https://github.com/cloudflare/workers-sdk/issues/729)
+
+### Patch Changes
+
+- [#6039](https://github.com/cloudflare/workers-sdk/pull/6039) [`dc597a3`](https://github.com/cloudflare/workers-sdk/commit/dc597a38218b428141c55c4e65633953c87ed180) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: hybrid nodejs compat now supports requiring the default export of a CJS module
+
+  Fixes [#6028](https://github.com/cloudflare/workers-sdk/issues/6028)
+
+- [#6051](https://github.com/cloudflare/workers-sdk/pull/6051) [`15aff8f`](https://github.com/cloudflare/workers-sdk/commit/15aff8f6e6ce533f25495193e702a6bec76fa81c) Thanks [@threepointone](https://github.com/threepointone)! - fix: Don't check expiry dates on custom certs
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/5964
+
+  For `wrangler dev`, we don't have to check whether certificates have expired when they're provided by the user.
+
+- [#6052](https://github.com/cloudflare/workers-sdk/pull/6052) [`b4c0233`](https://github.com/cloudflare/workers-sdk/commit/b4c02333829c2312f883e897f812f9877dba603a) Thanks [@threepointone](https://github.com/threepointone)! - chore: Add `.wrangler` and `.DS_Store` to `.gitignore` generated by `wrangler init`
+
+  This commit adds a small QOL improvement to `init` (to be deprecated in the future), for those who still use this wrangler command.
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6046](https://github.com/cloudflare/workers-sdk/pull/6046) [`c643a81`](https://github.com/cloudflare/workers-sdk/commit/c643a8193a3c0739b33d3c0072ae716bc8f1565b) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more dependencies.
+
+  Follow up to https://github.com/cloudflare/workers-sdk/pull/6029, this normalizes some more dependencies : `get-port`, `chalk`, `yargs`, `toucan-js`, `@typescript-eslint/parser`, `@typescript-eslint/eslint-plugin`, `esbuild-register`, `hono`, `glob-to-regexp`, `@cloudflare/workers-types`
+
+- [#6058](https://github.com/cloudflare/workers-sdk/pull/6058) [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99) Thanks [@threepointone](https://github.com/threepointone)! - chore: Quieter builds
+
+  This patch cleans up warnings we were seeing when doing a full build. Specifically:
+
+  - fixtures/remix-pages-app had a bunch of warnings about impending features that it should be upgraded to, so I did that. (tbh this one needs a full upgrade of packages, but we'll get to that later when we're upgrading across the codebase)
+  - updated `@microsoft/api-extractor` so it didn't complain that it didn't match the `typescript` version (that we'd recently upgraded)
+  - it also silenced a bunch of warnings when exporting types from `wrangler`. We'll need to fix those, but we'll do that when we work on unstable_dev etc.
+  - workers-playground was complaining about the size of the bundle being generated, so I increased the limit on it
+
+- [#6043](https://github.com/cloudflare/workers-sdk/pull/6043) [`db66101`](https://github.com/cloudflare/workers-sdk/commit/db661015d37ce75c021413e3ca7c4f0488790cbc) Thanks [@threepointone](https://github.com/threepointone)! - fix: avoid esbuild warning when running dev/bundle
+
+  I've been experimenting with esbuild 0.21.4 with wrangler. It's mostly been fine. But I get this warning every time
+
+  ```
+  ▲ [WARNING] Import "__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__" will always be undefined because there is no matching export in "src/index.ts" [import-is-undefined]
+
+      .wrangler/tmp/bundle-Z3YXTd/middleware-insertion-facade.js:8:23:
+        8 │ .....(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),
+          ╵
+  ```
+
+  This is because esbuild@0.18.5 enabled a warning by default whenever an undefined import is accessed on an imports object. However we abuse imports to inject stuff in `middleware.test.ts`. A simple fix is to only inject that code in tests.
+
+- [#6062](https://github.com/cloudflare/workers-sdk/pull/6062) [`267761b`](https://github.com/cloudflare/workers-sdk/commit/267761b3f5a60e9ea72067d42302895f9d459460) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: typo in `wrangler d1 execute` saying "Databas" instead of "Database"
+
+- [#6064](https://github.com/cloudflare/workers-sdk/pull/6064) [`84e6aeb`](https://github.com/cloudflare/workers-sdk/commit/84e6aeb189a4f385c49b7c6d451d0613186b29be) Thanks [@helloimalastair](https://github.com/helloimalastair)! - fix: Wrangler is now able to upload files to local R2 buckets above the 300 MiB limit
+
+- Updated dependencies [[`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99)]:
+  - miniflare@3.20240610.1
+  - @cloudflare/kv-asset-handler@0.3.3
+
+## 3.60.3
+
+### Patch Changes
+
+- [#6025](https://github.com/cloudflare/workers-sdk/pull/6025) [`122ef06`](https://github.com/cloudflare/workers-sdk/commit/122ef0681a8aa5338993cb21f111f84ef5c3a443) Thanks [@IgorMinar](https://github.com/IgorMinar)! - fix: avoid path collisions between performance and Performance Node.js polyfills
+
+  It turns out that ESBuild paths are case insensitive, which can result in path collisions between polyfills for `globalThis.performance` and `globalThis.Performance`, etc.
+
+  This change ensures that we encode all global names to lowercase and decode them appropriately.
+
+- [#6009](https://github.com/cloudflare/workers-sdk/pull/6009) [`169a9fa`](https://github.com/cloudflare/workers-sdk/commit/169a9fa260b7cb76cf5ef9e9e29a4fd33af8cf2f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: reduce the number of parallel file reads on Windows to avoid EMFILE type errors
+
+  Fixes #1586
+
+- [`53acdbc`](https://github.com/cloudflare/workers-sdk/commit/53acdbc00a95e621d90d225d943c36df41768571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: warn if user tries normal deploy when in the middle of a gradual version rollout
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c)]:
+  - miniflare@3.20240610.0
+
 ## 3.60.2
 
 ### Patch Changes

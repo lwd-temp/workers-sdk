@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
-import React from "react";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
@@ -227,7 +226,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		 * to create that project for them
 		 */
 		if (projectName !== undefined && !isExistingProject) {
-			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?"`;
+			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?`;
 			const items: NewOrExistingItem[] = [
 				{
 					key: "new",

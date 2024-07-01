@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { DevEnv } from "../api";
+import { fakeResolvedInput } from "../api/startDevWorker/utils";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -31,7 +31,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerOptions } from "../api";
+import type { ProxyData, StartDevWorkerInput } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -46,12 +46,13 @@ export async function startDevServer(
 	props: DevProps & {
 		local: boolean;
 		disableDevRegistry: boolean;
+		experimentalDevEnv: boolean;
 	}
 ) {
 	let workerDefinitions: WorkerRegistry = {};
 	validateDevProps(props);
 
-	if (props.build.command) {
+	if (props.build.command && !props.experimentalDevEnv) {
 		const relativeFile =
 			path.relative(props.entry.directory, props.entry.file) || ".";
 		await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
@@ -69,7 +70,7 @@ export async function startDevServer(
 
 	//start the worker registry
 	logger.log("disableDevRegistry: ", props.disableDevRegistry);
-	if (!props.disableDevRegistry) {
+	if (!props.disableDevRegistry && !props.experimentalDevEnv) {
 		try {
 			await startWorkerRegistry();
 			if (props.local) {
@@ -90,10 +91,10 @@ export async function startDevServer(
 		}
 	}
 
-	const devEnv = new DevEnv();
-	const startDevWorkerOptions: StartDevWorkerOptions = {
+	const devEnv = props.devEnv;
+	const startDevWorkerOptions: StartDevWorkerInput = {
 		name: props.name ?? "worker",
-		script: { contents: "" },
+		entrypoint: props.entry.file,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -131,17 +132,24 @@ export async function startDevServer(
 				return { accountId, apiToken: requireApiToken() };
 			},
 		},
+		build: {
+			// format: props.entry.format,
+			moduleRoot: props.entry.moduleRoot,
+			nodejsCompatMode: null,
+		},
 	};
 
 	// temp: fake these events by calling the handler directly
-	devEnv.proxy.onConfigUpdate({
-		type: "configUpdate",
-		config: startDevWorkerOptions,
-	});
-	devEnv.proxy.onBundleStart({
-		type: "bundleStart",
-		config: startDevWorkerOptions,
-	});
+	if (!props.experimentalDevEnv) {
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: fakeResolvedInput(startDevWorkerOptions),
+		});
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: fakeResolvedInput(startDevWorkerOptions),
+		});
+	}
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
@@ -161,6 +169,7 @@ export async function startDevServer(
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
+		alias: props.alias,
 		assets: props.assetsConfig,
 		testScheduled: props.testScheduled,
 		local: props.local,
@@ -173,14 +182,6 @@ export async function startDevServer(
 	});
 
 	if (props.experimentalDevEnv) {
-		devEnv.runtimes.forEach((runtime) => {
-			runtime.onBundleComplete({
-				type: "bundleComplete",
-				config: startDevWorkerOptions,
-				bundle,
-			});
-		});
-
 		// to comply with the current contract of this function, call props.onReady on reloadComplete
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (ev) => {
@@ -196,7 +197,7 @@ export async function startDevServer(
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
-			config: startDevWorkerOptions,
+			config: fakeResolvedInput(startDevWorkerOptions),
 			bundle,
 		});
 
@@ -241,12 +242,14 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: fakeResolvedInput(startDevWorkerOptions),
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
@@ -258,7 +261,11 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
 		};
 	} else {
@@ -295,12 +302,14 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: fakeResolvedInput(startDevWorkerOptions),
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
@@ -310,7 +319,11 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
 		};
 	}
@@ -333,6 +346,7 @@ async function runEsbuild({
 	processEntrypoint,
 	additionalModules,
 	rules,
+	alias,
 	assets,
 	serveAssetsFromWorker,
 	tsconfig,
@@ -354,6 +368,7 @@ async function runEsbuild({
 	processEntrypoint: boolean;
 	additionalModules: CfModule[];
 	rules: Config["rules"];
+	alias: Config["alias"];
 	assets: Config["assets"];
 	define: Config["define"];
 	serveAssetsFromWorker: boolean;
@@ -402,6 +417,7 @@ async function runEsbuild({
 					nodejsCompatMode,
 					define,
 					checkFetch: true,
+					alias,
 					assets,
 					// disable the cache in dev
 					bypassAssetCache: true,
@@ -429,7 +445,7 @@ async function runEsbuild({
 }
 
 export async function startLocalServer(
-	props: LocalProps
+	props: LocalProps & { experimentalDevEnv: boolean }
 ): Promise<{ stop: () => Promise<void> }> {
 	if (!props.bundle || !props.format) {
 		return { async stop() {} };

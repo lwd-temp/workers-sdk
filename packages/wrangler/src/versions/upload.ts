@@ -52,6 +52,7 @@ type Props = {
 	compatibilityFlags: string[] | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
+	alias: Record<string, string> | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	tsconfig: string | undefined;
@@ -282,6 +283,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
+						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
 						assets: config.assets,
 						// enable the cache when publishing
@@ -378,7 +380,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
-			usage_model: config.usage_model,
 			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			logpush: undefined,
